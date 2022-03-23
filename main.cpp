@@ -24,9 +24,17 @@
 
 #include <string>
 #include <functional> //mem_fn
-#include "user_score.h"
+//#include "user_score.h"
 #include "grammar.h"
 #include "item_evaluator.h"
+
+namespace biz{
+	struct UserScore{ float like; float follow; float comment;};
+}
+
+float like(biz::UserScore const& user){ return user.like; };
+float follow(biz::UserScore const& user){ return user.follow; };
+float comment(biz::UserScore const& user){ return user.comment; };
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Main program
@@ -43,7 +51,10 @@ int main()
 		std::mem_fn(&biz::UserScore::follow),
 		std::mem_fn(&biz::UserScore::comment)
 	};
-	auto&& gram = expr::MakeGrammer(symbols, fnList);
+	auto&& gram = expr::MakeGrammar(symbols, fnList);
+
+	auto fnList2  = {&like,&follow,&comment};
+	auto&& gram2 = expr::MakeGrammar(symbols, fnList2);
 
 	std::string str;
 	while (std::getline(std::cin, str))
@@ -51,12 +62,14 @@ int main()
 		if (str.empty() || str[0] == 'q' || str[0] == 'Q')
 			break;
 
-		auto user_eval = expr::Parse(str, gram);	
+		auto user_eval = expr::Parse<biz::UserScore>(str, gram);	
+		auto user_eval2 = expr::Parse(str, gram2);	
 
 		biz::UserScore user1 ={1,2,3}, user2={2,3,4};
 		for(auto& user : {user1, user2}){
 			std::cout << "user score: like->" << user.like << ", follow->" << user.follow << ", comment->" << user.comment << '\n';
 			std::cout << "weighted score is : " << user_eval(user) << '\n' << std::endl;
+			std::cout << "weighted score is : " << user_eval2(user) << '\n' << std::endl;
 		}
 		std::cout << "-------------------------\n";
 	}

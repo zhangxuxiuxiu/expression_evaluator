@@ -55,15 +55,16 @@ namespace expr { namespace ast
 	///////////////////////////////////////////////////////////////////////////
 	//  The AST evaluator
 	///////////////////////////////////////////////////////////////////////////
+	template<class FuncType, class ItemType>
 	struct ExprEvaluator
 	{
-		mutable biz::UserScore const* user_ptr=nullptr;
+		mutable  ItemType const* item_ptr=nullptr;
 
 		typedef float result_type;
 
 		result_type operator()(Nil) const { BOOST_ASSERT(0); return 0; }
 		result_type operator()(float n) const { return n; }
-		result_type operator()(ScoreFn const& fn) const { return fn(*user_ptr); }
+		result_type operator()(ScoreFn const& fn) const { return boost::any_cast<FuncType>(fn)(*item_ptr); }
 
 		result_type operator()(Operation const& x, float lhs) const
 		{

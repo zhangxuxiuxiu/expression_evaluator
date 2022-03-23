@@ -1,31 +1,45 @@
 #pragma once
 
+#include <boost/function_types/parameter_types.hpp>
 #include <boost/spirit/include/qi.hpp> // phrase_parse
 #include <exception> //invalid_argument
 
-#include "user_score.h"
 #include "grammar.h"
 #include "visitor.h"
 
 namespace expr{
 
+	template<class FuncType, class ItemType>
 	class ItemEvaluator{
 		public:
+			using element_type = ItemType; 
 			ItemEvaluator(ast::Program const& prog) : program(prog){}
 
-			float operator()(biz::UserScore const& user) const{
-				eval.user_ptr = &user;
+			float operator()(element_type const& item) const{
+				eval.item_ptr = &item;
 				return eval(program);
 			}
 
 		private:
 			expr::ast::Program program;
-			expr::ast::ExprEvaluator eval;
+			expr::ast::ExprEvaluator<FuncType, element_type> eval;
 			
 	};
 
-	template<class StrType>
-	ItemEvaluator  Parse(StrType const& statement, CalcGrammer<typename StrType::const_iterator> const& gram){
+	template<class F>
+	struct parameter_types{
+		using arg1_type = typename boost::remove_cv<
+						typename boost::remove_reference<
+							typename boost::mpl::at_c<
+								typename boost::function_types::parameter_types<F>::type, 0>
+							::type
+						>::type
+					>::type;
+	};
+
+	// infer ItemType
+	template<class StrType, class FuncType, class ItemType=typename parameter_types<FuncType>::arg1_type>
+	ItemEvaluator<FuncType, ItemType>  Parse(StrType const& statement, CalcGrammar<typename StrType::const_iterator, FuncType> const& gram){
 		expr::ast::Program program;
 		auto iter = statement.begin();
 		auto end = statement.end();
@@ -35,6 +49,13 @@ namespace expr{
 			return {program}; 
 		}
 		throw std::invalid_argument("invalid statement:"+statement);
+	}
+
+	// specify ItemType
+	template<class ItemType, class StrType, class Grammar>
+	auto Parse(StrType const& statement, Grammar const& gram)
+	-> decltype(Parse<StrType, typename GrammarTraits<Grammar>::func_type, ItemType>(statement, gram)){
+		return Parse<StrType, typename GrammarTraits<Grammar>::func_type, ItemType>(statement, gram);
 	}
 
 }

@@ -12,11 +12,11 @@ namespace expr
 	///////////////////////////////////////////////////////////////////////////////
 	//  The calculator grammar
 	///////////////////////////////////////////////////////////////////////////////
-	template <typename Iterator>
-		struct CalcGrammer : qi::grammar<Iterator, ast::Program(), ascii::space_type>
+	template <typename Iterator, typename FuncType>
+		struct CalcGrammar : qi::grammar<Iterator, ast::Program(), ascii::space_type>
 	{
 		template<class Symbols, class FnRange>
-		CalcGrammer(Symbols&& symbols, FnRange&& fns) : CalcGrammer::base_type(expression),
+		CalcGrammar(Symbols&& symbols, FnRange&& fns) : CalcGrammar::base_type(expression),
 			symbol2fn(symbols, fns)
 		{
 			qi::float_type float_;
@@ -51,6 +51,14 @@ namespace expr
 		qi::rule<Iterator, ast::Operand(), ascii::space_type> factor;
 	};
 
+	template<class Grammar>
+	struct GrammarTraits{};
+	template<class Iterator, class FuncType>
+	struct GrammarTraits<CalcGrammar<Iterator,FuncType>>{
+		using iterator = Iterator;
+		using func_type = FuncType;
+	};
+
 	template<class StrType>
 	struct StringTraits{};
 	template<class CharType>
@@ -69,8 +77,17 @@ namespace expr
 		using type = typename string_type::const_iterator;
 	};
 
+	template<class Container>
+	struct ContainedType{
+		using type = typename std::remove_const<
+				typename std::remove_reference<
+					typename Container::value_type				
+				>::type
+			>::type;
+	};
+
 	template<class Keywords, class FnRange>
-	CalcGrammer<typename IteratorFromKeywords<Keywords>::type> MakeGrammer(Keywords const& keywords, FnRange const& fnList){
+	CalcGrammar<typename IteratorFromKeywords<Keywords>::type, typename ContainedType<FnRange>::type> MakeGrammar(Keywords const& keywords, FnRange const& fnList){
 		return {keywords, fnList};
 	}
 

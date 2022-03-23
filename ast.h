@@ -1,12 +1,10 @@
 #pragma once
 
+#include <boost/any.hpp> // any
 #include <boost/variant/recursive_variant.hpp> //variant
 #include <boost/fusion/include/adapt_struct.hpp> //BOOST_FUSION_ADAPT_STRUCT
 
-#include <functional> // std::function
 #include <list> // std::list
-
-#include "user_score.h"
 
 namespace expr { namespace ast
 {
@@ -17,7 +15,7 @@ namespace expr { namespace ast
 	struct Signed;
 	struct Program;
 
-	using ScoreFn = std::function<float(biz::UserScore const&)>;
+	using ScoreFn = boost::any;
 
 	typedef boost::variant<
 		Nil
