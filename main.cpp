@@ -51,7 +51,7 @@ int main()
 		if (str.empty() || str[0] == 'q' || str[0] == 'Q')
 			break;
 
-		auto user_eval = expr::ItemEvaluator::Parse(str, gram);	
+		auto user_eval = expr::Parse(str, gram);	
 
 		biz::UserScore user1 ={1,2,3}, user2={2,3,4};
 		for(auto& user : {user1, user2}){
