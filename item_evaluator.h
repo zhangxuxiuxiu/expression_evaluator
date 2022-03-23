@@ -27,8 +27,8 @@ namespace expr{
 	};
 
 	template<class F>
-	struct parameter_types{
-		using arg1_type = typename boost::remove_cv<
+	struct arg1_type{
+		using type = typename boost::remove_cv<
 						typename boost::remove_reference<
 							typename boost::mpl::at_c<
 								typename boost::function_types::parameter_types<F>::type, 0>
@@ -38,7 +38,7 @@ namespace expr{
 	};
 
 	// infer ItemType
-	template<class StrType, class FuncType, class ItemType=typename parameter_types<FuncType>::arg1_type>
+	template<class StrType, class FuncType, class ItemType=typename arg1_type<FuncType>::type>
 	ItemEvaluator<FuncType, ItemType>  Parse(StrType const& statement, CalcGrammar<typename StrType::const_iterator, FuncType> const& gram){
 		expr::ast::Program program;
 		auto iter = statement.begin();
