@@ -8,49 +8,6 @@
 
 namespace expr { namespace ast
 {
-	///////////////////////////////////////////////////////////////////////////
-	//  The AST Printer
-	///////////////////////////////////////////////////////////////////////////
-	struct Printer
-	{
-		typedef void result_type;
-
-		void operator()(Nil) const {}
-		void operator()(float n) const { std::cout << n; }
-		void operator()(ScoreFn const& fn ) const { std::cout << "score fn"; }
-
-		void operator()(Operation const& x) const
-		{
-			boost::apply_visitor(*this, x.operand);
-			switch (x.operator_)
-			{
-				case '+': std::cout << " add"; break;
-				case '-': std::cout << " subt"; break;
-				case '*': std::cout << " mult"; break;
-				case '/': std::cout << " div"; break;
-			}
-		}
-
-		void operator()(Signed const& x) const
-		{
-			boost::apply_visitor(*this, x.operand);
-			switch (x.sign)
-			{
-				case '-': std::cout << " neg"; break;
-				case '+': std::cout << " pos"; break;
-			}
-		}
-
-		void operator()(Program const& x) const
-		{
-			boost::apply_visitor(*this, x.first);
-			for(Operation const& oper : x.rest)
-			{
-				std::cout << ' ';
-				(*this)(oper);
-			}
-		}
-	};
 
 	///////////////////////////////////////////////////////////////////////////
 	//  The AST evaluator
