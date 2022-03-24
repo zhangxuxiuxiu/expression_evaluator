@@ -11,21 +11,20 @@ namespace expr
 {
 	// support function pointer, member object/function pointer
 	template<class F>
-	struct arg1_type{
+	struct arg1_type : boost::false_type{};
+	template<class R, class T, class... U>
+	struct arg1_type<R(T,U...)> : boost::true_type{
 		using type = typename boost::remove_cv<
-					typename boost::remove_reference<
-						typename boost::function_traits<F>::arg1_type
-					>::type
+					typename boost::remove_reference<T>::type
 				>::type;
+		
 	};
 	template<class R, class... A>
 	struct arg1_type<R(*)(A...)> : arg1_type<R(A...)>{};
 	template<class R, class... A>
 	struct arg1_type<R(&)(A...)> : arg1_type<R(A...)>{};
 	template<class R, class T>
-	struct arg1_type<R T::*>{
-		using type = T;
-	};
+	struct arg1_type<R T::*> : arg1_type<void(T)>{};
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  The calculator grammar
@@ -86,7 +85,8 @@ namespace expr
 
 		// infer ItemType
 		template<class StrType, class F=FuncType>
-		ItemEvaluator<F, typename arg1_type<F>::type>Parse(StrType const& statement) const {
+		ItemEvaluator<F, typename arg1_type<F>::type> Parse(StrType const& statement) const {
+			static_assert(arg1_type<F>::value, "specify biz type for non function/member pointer like Parse<BizType>(statement)");
 			return Parse<typename arg1_type<F>::type>(statement);
 		}
 
@@ -132,6 +132,7 @@ namespace expr
 	// infer ItemType
 	template<class StrType, class FuncType, class ItemType=typename arg1_type<FuncType>::type>
 	ItemEvaluator<FuncType, ItemType>  Parse(StrType const& statement, CalcGrammar<typename StrType::const_iterator, FuncType> const& gram){
+		static_assert(arg1_type<FuncType>::value, "specify biz type for non function/member pointer like Parse<BizType>(statement)");
 		return gram.Parse(statement);
 	}
 
