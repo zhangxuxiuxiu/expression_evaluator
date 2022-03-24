@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream> //cout
+#include <type_traits> //is_member_xxx
 
 #include <boost/variant/apply_visitor.hpp> // apply_visitor
 
@@ -15,13 +16,32 @@ namespace expr { namespace ast
 	template<class FuncType, class ItemType>
 	struct ExprEvaluator
 	{
-		mutable  ItemType const* item_ptr=nullptr;
+		// ItemType can't be qualified with const here in case non-const object or function
+		mutable  ItemType * item_ptr=nullptr;
 
 		typedef float result_type;
 
 		result_type operator()(Nil) const { BOOST_ASSERT(0); return 0; }
+
 		result_type operator()(float n) const { return n; }
-		result_type operator()(ScoreFn const& fn) const { return boost::any_cast<FuncType>(fn)(*item_ptr); }
+
+		template<class F=FuncType>
+		auto operator()(ScoreFn const& fn) const
+		->typename std::enable_if<std::is_member_object_pointer<F>::value, result_type>::type { 
+			return item_ptr->*boost::any_cast<FuncType>(fn); 
+		}
+
+		template<class F=FuncType>
+		auto operator()(ScoreFn const& fn) const
+		->typename std::enable_if<std::is_member_function_pointer<F>::value, result_type>::type  { 
+			return (item_ptr->*boost::any_cast<FuncType>(fn))(); 
+		}
+
+		template<class F=FuncType>
+		auto operator()(ScoreFn const& fn) const
+		->typename std::enable_if<!std::is_member_pointer<F>::value, result_type>::type  { 
+			return boost::any_cast<FuncType>(fn)(*item_ptr); 
+		}
 
 		result_type operator()(Operation const& x, float lhs) const
 		{

@@ -23,13 +23,21 @@
 #define BOOST_SPIRIT_NO_PREDEFINED_TERMINALS
 
 #include <string>
+#include <vector>
 #include <functional> //mem_fn
 //#include "user_score.h"
 #include "grammar.h"
 #include "item_evaluator.h"
 
 namespace biz{
-	struct UserScore{ float like; float follow; float comment;};
+	struct UserScore{ float like; float follow; float comment;
+		float lk() const{ return like;}
+		float fw() const{ return follow;}
+		float cmt() const{ return comment;}
+		float lk2() { return like;}
+		float fw2() { return follow;}
+		float cmt2() { return comment;}
+	};
 }
 
 float like(biz::UserScore const& user){ return user.like; };
@@ -47,14 +55,30 @@ int main()
 	std::cout << "Type an expression...or [q or Q] to quit\n\n";
 
 	auto symbols = {"like","follow", "comment"};
-	auto fnList  = {std::mem_fn(&biz::UserScore::like),
-		std::mem_fn(&biz::UserScore::follow),
-		std::mem_fn(&biz::UserScore::comment)
+	//auto fnList  = {std::mem_fn(&biz::UserScore::like),
+	//	std::mem_fn(&biz::UserScore::follow),
+	//	std::mem_fn(&biz::UserScore::comment)
+	//};
+	auto fnList  = {&biz::UserScore::like,
+		&biz::UserScore::follow,
+		&biz::UserScore::comment
 	};
 	auto&& gram = expr::MakeGrammar(symbols, fnList);
 
 	auto fnList2  = {&like,&follow,&comment};
 	auto&& gram2 = expr::MakeGrammar(symbols, fnList2);
+
+	auto fnList3  = {&biz::UserScore::lk,
+		&biz::UserScore::fw,
+		&biz::UserScore::cmt
+	};
+	auto&& gram3 = expr::MakeGrammar(symbols, fnList3);
+
+	auto fnList4  = {&biz::UserScore::lk2,
+		&biz::UserScore::fw2,
+		&biz::UserScore::cmt2
+	};
+	auto&& gram4 = expr::MakeGrammar(symbols, fnList4);
 
 	std::string str;
 	while (std::getline(std::cin, str))
@@ -62,14 +86,19 @@ int main()
 		if (str.empty() || str[0] == 'q' || str[0] == 'Q')
 			break;
 
-		auto user_eval = expr::Parse<biz::UserScore>(str, gram);	
-		auto user_eval2 = expr::Parse(str, gram2);	
+		auto user_eval = gram.Parse(str);	
+		auto user_eval2 = gram2.Parse(str);	
+		auto user_eval3 = gram3.Parse(str);	
+		auto user_eval4 = gram4.Parse(str);	
 
 		biz::UserScore user1 ={1,2,3}, user2={2,3,4};
-		for(auto& user : {user1, user2}){
+		// NOTE initializer_list<UserScore> won't work for user_eval4 here, b' initializer_list only return const iterator while fnList4 has non-const function
+		for(auto& user : std::vector<biz::UserScore>{user1, user2}){
 			std::cout << "user score: like->" << user.like << ", follow->" << user.follow << ", comment->" << user.comment << '\n';
 			std::cout << "weighted score is : " << user_eval(user) << '\n' << std::endl;
 			std::cout << "weighted score is : " << user_eval2(user) << '\n' << std::endl;
+			std::cout << "weighted score is : " << user_eval3(user) << '\n' << std::endl;
+			std::cout << "weighted score is : " << user_eval4(user) << '\n' << std::endl;
 		}
 		std::cout << "-------------------------\n";
 	}
