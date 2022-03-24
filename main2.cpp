@@ -26,7 +26,7 @@
 #include <vector>
 #include <functional> //mem_fn
 
-#include "grammar.h"
+#include "grammar2.h"
 
 namespace biz{
 	struct UserScore{ float like; float follow; float comment;
@@ -59,7 +59,8 @@ int main()
 		std::mem_fn(&biz::UserScore::follow),
 		std::mem_fn(&biz::UserScore::comment)
 	};
-	auto&& gram0= expr::MakeGrammar(symbols, fnList0);
+	// if not function or member pointer, specify biz type
+	auto&& gram0= expr::MakeGrammar(symbols, fnList0, boost::mpl::identity<biz::UserScore>{});
 
 	// case 1: member object pointer
 	auto fnList1  = {&biz::UserScore::like,
@@ -92,13 +93,8 @@ int main()
 		if (str.empty() || str[0] == 'q' || str[0] == 'Q')
 			break;
 
-		// if not function or member pointer, specify biz type
-		//auto user_eval0 = gram0.Parse<biz::UserScore>(str);	
-		auto user_eval0 = expr::Parse<biz::UserScore>(str,gram0);	
-		//auto user_eval0 = expr::Parse(str,gram0); // compilation error
-
-		//auto user_eval1 = gram1.Parse(str);	
-		auto user_eval1 = Parse(str,gram1);	
+		auto user_eval0 = gram0.Parse(str); 
+		auto user_eval1 = gram1.Parse(str);	
 		auto user_eval2 = gram2.Parse(str);	
 		auto user_eval3 = gram3.Parse(str);	
 		auto user_eval4 = gram4.Parse(str);	
