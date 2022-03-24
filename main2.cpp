@@ -59,8 +59,9 @@ int main()
 		std::mem_fn(&biz::UserScore::follow),
 		std::mem_fn(&biz::UserScore::comment)
 	};
-	// if not function or member pointer, specify biz type
-	auto&& gram0= expr::MakeGrammar(symbols, fnList0, boost::mpl::identity<biz::UserScore>{});
+	// if not function or member pointer, specify biz type in Parse function
+	auto&& gram0= expr::MakeGrammar(symbols, fnList0);//, boost::mpl::identity<biz::UserScore>{});
+	//auto&& gram0= expr::MakeGrammar<biz::UserScore>(symbols, fnList0);
 
 	// case 1: member object pointer
 	auto fnList1  = {&biz::UserScore::like,
@@ -93,7 +94,8 @@ int main()
 		if (str.empty() || str[0] == 'q' || str[0] == 'Q')
 			break;
 
-		auto user_eval0 = gram0.Parse(str); 
+		auto user_eval0 = gram0.Parse<biz::UserScore>(str); 
+		//auto user_eval0 = gram0.Parse(str); 
 		auto user_eval1 = gram1.Parse(str);	
 		auto user_eval2 = gram2.Parse(str);	
 		auto user_eval3 = gram3.Parse(str);	
