@@ -9,7 +9,6 @@
 
 namespace expr
 {
-
 	// support function pointer, member object/function pointer
 	template<class F>
 	struct arg1_type{
@@ -70,9 +69,10 @@ namespace expr
 		}
 
 
-		// infer ItemType
-		template<class StrType>
-		ItemEvaluator<FuncType, typename arg1_type<FuncType>::type> Parse(StrType const& statement) const{
+		// specify ItemType
+		template<class ItemType, class StrType>
+		ItemEvaluator<FuncType, ItemType> Parse(StrType const& statement) const
+		{
 			expr::ast::Program program;
 			auto iter = statement.begin();
 			auto end = statement.end();
@@ -84,13 +84,10 @@ namespace expr
 			throw std::invalid_argument("invalid statement:"+statement);
 		}
 
-		// specify ItemType
+		// infer ItemType
 		template<class StrType, class F=FuncType>
-		//auto Parse<typename arg1_type<FuncType>::type,StrType>(StrType const& statement) const
-		auto Parse(StrType const& statement) const
-		-> decltype(Parse<typename arg1_type<FuncType>::type,StrType>(statement))
-		{
-			return Parse<typename arg1_type<FuncType>::type,StrType>(statement);
+		ItemEvaluator<F, typename arg1_type<F>::type>Parse(StrType const& statement) const {
+			return Parse<typename arg1_type<F>::type>(statement);
 		}
 
 		qi::symbols<char, ast::ScoreFn>  symbol2fn;
@@ -135,21 +132,15 @@ namespace expr
 	// infer ItemType
 	template<class StrType, class FuncType, class ItemType=typename arg1_type<FuncType>::type>
 	ItemEvaluator<FuncType, ItemType>  Parse(StrType const& statement, CalcGrammar<typename StrType::const_iterator, FuncType> const& gram){
-		expr::ast::Program program;
-		auto iter = statement.begin();
-		auto end = statement.end();
-		boost::spirit::ascii::space_type space;
-		bool r = boost::spirit::qi::phrase_parse(iter, end, gram, space, program);
-		if (r && iter == end){
-			return {program}; 
-		}
-		throw std::invalid_argument("invalid statement:"+statement);
+		return gram.Parse(statement);
 	}
 
 	// specify ItemType
 	template<class ItemType, class StrType, class Grammar>
 	auto Parse(StrType const& statement, Grammar const& gram)
-	-> decltype(Parse<StrType, typename Grammar::func_type, ItemType>(statement, gram)){
-		return Parse<StrType, typename Grammar::func_type, ItemType>(statement, gram);
+	//-> decltype(Parse<StrType, typename Grammar::func_type, ItemType>(statement, gram)){
+	-> decltype(gram. template Parse<ItemType>(statement)){
+		return gram. template Parse<ItemType>(statement);
+		//return Parse<StrType, typename Grammar::func_type, ItemType>(statement, gram);
 	}
 }

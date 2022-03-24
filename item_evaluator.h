@@ -1,8 +1,7 @@
 #pragma once
 
-#include <boost/spirit/include/qi.hpp> // phrase_parse
-
 #include "expr_evaluator.h"
+#include "ast.h"
 
 namespace expr{
 
