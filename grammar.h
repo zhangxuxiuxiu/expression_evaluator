@@ -25,6 +25,12 @@ namespace expr
 	struct arg1_type<R(&)(A...)> : arg1_type<R(A...)>{};
 	template<class R, class T>
 	struct arg1_type<R T::*> : arg1_type<void(T)>{};
+	// for (boost|std)::function<Sig> or std::mem_fn alike
+	template<class Sig, template<class> class Functor>
+	struct arg1_type<Functor<Sig>> : arg1_type<Sig>{};
+	// for boost::mem_fn alike
+	template<class R, class... A, template<class...> class Functor>
+	struct arg1_type<Functor<R,A...>> : arg1_type<R(A...)>{};
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  The calculator grammar
@@ -32,7 +38,7 @@ namespace expr
 	namespace qi = boost::spirit::qi;
 	namespace ascii = boost::spirit::ascii;
 
-	template <typename Iterator, typename FuncType>
+	template <typename Iterator, typename FuncType, class ItemType>
 		struct CalcGrammar : qi::grammar<Iterator, ast::Program(), ascii::space_type>
 	{
 		using func_type = FuncType;
@@ -67,33 +73,29 @@ namespace expr
 				;
 		}
 
+		template<class StrType>
+		ItemEvaluator<FuncType, ItemType> Parse(StrType const& statement) const{
+			return doParse(statement);
+		}
 
-		// specify ItemType
-		template<class ItemType, class StrType>
-		ItemEvaluator<FuncType, ItemType> Parse(StrType const& statement) const
-		{
-			expr::ast::Program program;
-			auto iter = statement.begin();
-			auto end = statement.end();
-			boost::spirit::ascii::space_type space;
-			bool r = boost::spirit::qi::phrase_parse(iter, end, *this, space, program);
-			if (r && iter == end){
-				return {program}; 
+		private:
+			template<class StrType>
+			expr::ast::Program doParse(StrType const& statement) const{
+				expr::ast::Program program;
+				auto iter = statement.begin();
+				auto end = statement.end();
+				boost::spirit::ascii::space_type space;
+				bool r = boost::spirit::qi::phrase_parse(iter, end, *this, space, program);
+				if (r && iter == end){
+					return program; 
+				}
+				throw std::invalid_argument("invalid statement:"+statement);
 			}
-			throw std::invalid_argument("invalid statement:"+statement);
-		}
 
-		// infer ItemType
-		template<class StrType, class F=FuncType>
-		ItemEvaluator<F, typename arg1_type<F>::type> Parse(StrType const& statement) const {
-			static_assert(arg1_type<F>::value, "specify biz type for non function/member pointer like Parse<BizType>(statement)");
-			return Parse<typename arg1_type<F>::type>(statement);
-		}
-
-		qi::symbols<char, ast::ScoreFn>  symbol2fn;
-		qi::rule<Iterator, ast::Program(), ascii::space_type> expression;
-		qi::rule<Iterator, ast::Program(), ascii::space_type> term;
-		qi::rule<Iterator, ast::Operand(), ascii::space_type> factor;
+			qi::symbols<char, ast::ScoreFn>  symbol2fn;
+			qi::rule<Iterator, ast::Program(), ascii::space_type> expression;
+			qi::rule<Iterator, ast::Program(), ascii::space_type> term;
+			qi::rule<Iterator, ast::Operand(), ascii::space_type> factor;
 	};
 
 	template<class StrType>
@@ -123,25 +125,23 @@ namespace expr
 			>::type;
 	};
 
-	template<class Keywords, class FnRange, class KeyIterator=typename IteratorFromKeywords<Keywords>::type, 
+	template<class Keywords, class FnRange, 
+		class KeyIterator=typename IteratorFromKeywords<Keywords>::type, 
 		class FuncType=typename ContainedType<FnRange>::type>
-	CalcGrammar<KeyIterator, FuncType> MakeGrammar(Keywords const& keywords, FnRange const& fnList){
+	auto MakeGrammar(Keywords const& keywords, FnRange const& fnList) 
+	-> typename boost::enable_if<arg1_type<FuncType>,CalcGrammar<KeyIterator, FuncType,typename arg1_type<FuncType>::type >>::type{
 		return {keywords, fnList};
 	}
 
-	// infer ItemType
-	template<class StrType, class FuncType, class ItemType=typename arg1_type<FuncType>::type>
-	ItemEvaluator<FuncType, ItemType>  Parse(StrType const& statement, CalcGrammar<typename StrType::const_iterator, FuncType> const& gram){
-		static_assert(arg1_type<FuncType>::value, "specify biz type for non function/member pointer like Parse<BizType>(statement)");
-		return gram.Parse(statement);
-	}
+	template<class ItemType>
+	struct TypeHint{
+		template<class Keywords, class FnRange, 
+			class KeyIterator=typename IteratorFromKeywords<Keywords>::type, 
+			class FuncType=typename ContainedType<FnRange>::type>
+		static CalcGrammar<KeyIterator, FuncType, ItemType> MakeGrammar(Keywords const& keywords, FnRange const& fnList){
+			return {keywords, fnList};
+		}
 
-	// specify ItemType
-	template<class ItemType, class StrType, class Grammar>
-	auto Parse(StrType const& statement, Grammar const& gram)
-	//-> decltype(Parse<StrType, typename Grammar::func_type, ItemType>(statement, gram)){
-	-> decltype(gram. template Parse<ItemType>(statement)){
-		return gram. template Parse<ItemType>(statement);
-		//return Parse<StrType, typename Grammar::func_type, ItemType>(statement, gram);
-	}
+	};
+
 }
