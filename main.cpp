@@ -43,6 +43,30 @@ float like(biz::UserScore const& user){ return user.like; };
 float follow(biz::UserScore const& user){ return user.follow; };
 float comment(biz::UserScore const& user){ return user.comment; };
 
+template<class MF>
+struct UserOp{
+	MF mf;
+	UserOp(MF f=nullptr) : mf(f){}
+
+	float operator()(biz::UserScore const& user) const{
+		return (user.*mf)();	
+	}
+};
+
+struct UserOp2{
+	std::function<float(biz::UserScore const&)> mf;
+
+	// default constructible required
+	UserOp2(){}
+
+	template<class F>
+	UserOp2(F f) : mf(f){}
+
+	float operator()(biz::UserScore const& user) const{
+		return mf(user);	
+	}
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Main program
 ///////////////////////////////////////////////////////////////////////////////
@@ -54,7 +78,34 @@ int main()
 	std::cout << "Type an expression...or [q or Q] to quit\n\n";
 
 	auto symbols = {"like","follow", "comment"};
-	// case 0: any callable object
+
+	// case 0: for each Functor<Sig> like (std|boost)::function, result of std::mem_fn 
+	using Uop = UserOp<float(biz::UserScore::*)() const>;
+	std::vector<Uop> fnList_4  = {Uop{&biz::UserScore::lk},
+		Uop{&biz::UserScore::fw},
+		Uop{&biz::UserScore::cmt}
+	};
+	auto&& gram_4= expr::MakeGrammar(symbols, fnList_4);
+
+	std::vector<std::function<float(biz::UserScore const&)>> fnList_3  = {std::mem_fn(&biz::UserScore::like),
+		std::mem_fn(&biz::UserScore::follow),
+		std::mem_fn(&biz::UserScore::comment)
+	};
+	auto&& gram_3= expr::MakeGrammar(symbols, fnList_3);
+
+	std::vector<boost::function<float(biz::UserScore const&)>> fnList_2  = {std::mem_fn(&biz::UserScore::like),
+		std::mem_fn(&biz::UserScore::follow),
+		std::mem_fn(&biz::UserScore::comment)
+	};
+	auto&& gram_2= expr::MakeGrammar(symbols, fnList_2);
+
+	// for Functor<R, A...> like result of boost::mem_fn
+	auto fnList_1  = {boost::mem_fn(&biz::UserScore::like),
+		boost::mem_fn(&biz::UserScore::follow),
+		boost::mem_fn(&biz::UserScore::comment)
+	};
+	auto&& gram_1= expr::MakeGrammar(symbols, fnList_1);
+
 	auto fnList0  = {std::mem_fn(&biz::UserScore::like),
 		std::mem_fn(&biz::UserScore::follow),
 		std::mem_fn(&biz::UserScore::comment)
@@ -93,8 +144,8 @@ int main()
 			break;
 
 		// if not function or member pointer, specify biz type
-		//auto user_eval0 = gram0.Parse<biz::UserScore>(str);	
-		auto user_eval0 = expr::Parse<biz::UserScore>(str,gram0);	
+		auto user_eval0 = gram0.Parse<biz::UserScore>(str);	
+		//auto user_eval0 = expr::Parse<biz::UserScore>(str,gram0);	
 		//auto user_eval0 = expr::Parse(str,gram0); // compilation error
 
 		//auto user_eval1 = gram1.Parse(str);	

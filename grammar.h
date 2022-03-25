@@ -25,6 +25,12 @@ namespace expr
 	struct arg1_type<R(&)(A...)> : arg1_type<R(A...)>{};
 	template<class R, class T>
 	struct arg1_type<R T::*> : arg1_type<void(T)>{};
+	// for (boost|std)::function<Sig> or std::mem_fn alike
+	template<class Sig, template<class> class Functor>
+	struct arg1_type<Functor<Sig>> : arg1_type<Sig>{};
+	// for boost::mem_fn alike
+	template<class R, class... A, template<class...> class Functor>
+	struct arg1_type<Functor<R,A...>> : arg1_type<R(A...)>{};
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  The calculator grammar
@@ -139,9 +145,7 @@ namespace expr
 	// specify ItemType
 	template<class ItemType, class StrType, class Grammar>
 	auto Parse(StrType const& statement, Grammar const& gram)
-	//-> decltype(Parse<StrType, typename Grammar::func_type, ItemType>(statement, gram)){
 	-> decltype(gram. template Parse<ItemType>(statement)){
 		return gram. template Parse<ItemType>(statement);
-		//return Parse<StrType, typename Grammar::func_type, ItemType>(statement, gram);
 	}
 }
