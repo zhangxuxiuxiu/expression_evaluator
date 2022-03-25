@@ -25,6 +25,12 @@ namespace expr
 	struct arg1_type<R(&)(A...)> : arg1_type<R(A...)>{};
 	template<class R, class T>
 	struct arg1_type<R T::*> : arg1_type<void(T)>{};
+	// for (boost|std)::function<Sig> or std::mem_fn alike
+	template<class Sig, template<class> class Functor>
+	struct arg1_type<Functor<Sig>> : arg1_type<Sig>{};
+	// for boost::mem_fn alike
+	template<class R, class... A, template<class...> class Functor>
+	struct arg1_type<Functor<R,A...>> : arg1_type<R(A...)>{};
 
 	///////////////////////////////////////////////////////////////////////////////
 	//  The calculator grammar
@@ -32,8 +38,7 @@ namespace expr
 	namespace qi = boost::spirit::qi;
 	namespace ascii = boost::spirit::ascii;
 
-	struct DefaultItem{};
-	template <typename Iterator, typename FuncType, class ItemType=DefaultItem>
+	template <typename Iterator, typename FuncType, class ItemType>
 		struct CalcGrammar : qi::grammar<Iterator, ast::Program(), ascii::space_type>
 	{
 		using func_type = FuncType;
@@ -68,16 +73,8 @@ namespace expr
 				;
 		}
 
-		// specify ItemType
-		template<class BindItem, class StrType, class Item=ItemType>
-		auto Parse(StrType const& statement) const
-		-> typename boost::enable_if<boost::is_same<DefaultItem,Item>,ItemEvaluator<FuncType, BindItem>>::type{
-			return doParse(statement);
-		}
-
-		template<class StrType, class Item=ItemType>
-		auto Parse(StrType const& statement) const
-		-> typename boost::enable_if<boost::negation<boost::is_same<DefaultItem,Item>>,ItemEvaluator<FuncType, Item>>::type{
+		template<class StrType>
+		ItemEvaluator<FuncType, ItemType> Parse(StrType const& statement) const{
 			return doParse(statement);
 		}
 
@@ -131,39 +128,20 @@ namespace expr
 	template<class Keywords, class FnRange, 
 		class KeyIterator=typename IteratorFromKeywords<Keywords>::type, 
 		class FuncType=typename ContainedType<FnRange>::type>
-	auto MakeGrammar(Keywords const& keywords, FnRange const& fnList)
-	-> typename boost::enable_if<boost::negation<arg1_type<FuncType>>,CalcGrammar<KeyIterator, FuncType>>::type{
-		return {keywords, fnList};
-	}
-
-	template<class Keywords, class FnRange, 
-		class KeyIterator=typename IteratorFromKeywords<Keywords>::type, 
-		class FuncType=typename ContainedType<FnRange>::type>
-	auto MakeGrammar(Keywords const& keywords, FnRange const& fnList)
+	auto MakeGrammar(Keywords const& keywords, FnRange const& fnList) 
 	-> typename boost::enable_if<arg1_type<FuncType>,CalcGrammar<KeyIterator, FuncType,typename arg1_type<FuncType>::type >>::type{
 		return {keywords, fnList};
 	}
 
-//	template<class ItemType, class Keywords, class FnRange, 
-//		class KeyIterator=typename IteratorFromKeywords<Keywords>::type, 
-//		class FuncType=typename ContainedType<FnRange>::type>
-//	auto MakeGrammar(Keywords const& keywords, FnRange const& fnList)
-//	-> typename boost::enable_if<boost::negation<arg1_type<FuncType>>,CalcGrammar<KeyIterator, FuncType, ItemType>>::type{
-//		return {keywords, fnList};
-//	}
+	template<class ItemType>
+	struct TypeHint{
+		template<class Keywords, class FnRange, 
+			class KeyIterator=typename IteratorFromKeywords<Keywords>::type, 
+			class FuncType=typename ContainedType<FnRange>::type>
+		static CalcGrammar<KeyIterator, FuncType, ItemType> MakeGrammar(Keywords const& keywords, FnRange const& fnList){
+			return {keywords, fnList};
+		}
 
-//	template<class Keywords, class FnRange> 
-////		class KeyIterator=typename IteratorFromKeywords<Keywords>::type, 
-////		class FuncType=typename ContainedType<FnRange>::type>
-//	auto MakeGrammar(Keywords const& keywords, FnRange const& fnList)
-//	-> typename boost::enable_if<
-//			arg1_type<typename ContainedType<FnRange>::type>,
-//			CalcGrammar<typename IteratorFromKeywords<Keywords>::type, 
-//				    typename ContainedType<FnRange>::type, 
-//				    typename arg1_type< typename ContainedType<FnRange>::type >::type 
-//				>
-//			>::type{
-//		return {keywords, fnList};
-//	}
+	};
 
 }
