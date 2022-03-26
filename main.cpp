@@ -1,20 +1,3 @@
-/*=============================================================================
-  Copyright (c) 2001-2011 Joel de Guzman
-
-  Distributed under the Boost Software License, Version 1.0. (See accompanying
-  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-  =============================================================================*/
-///////////////////////////////////////////////////////////////////////////////
-//
-//  A Calculator example demonstrating generation of AST. The AST,
-//  once created, is traversed, 1) To print its contents and
-//  2) To evaluate the result.
-//
-//  [ JDG April 28, 2008 ]      For BoostCon 2008
-//  [ JDG February 18, 2011 ]   Pure attributes. No semantic actions.
-//
-///////////////////////////////////////////////////////////////////////////////
-
 // Spirit v2.5 allows you to suppress automatic generation
 // of predefined terminals to speed up complation. With
 // BOOST_SPIRIT_NO_PREDEFINED_TERMINALS defined, you are
@@ -111,9 +94,6 @@ int main()
 		std::mem_fn(&biz::UserScore::comment)
 	};
 	auto&& gram0= expr::MakeGrammar(symbols, fnList0);
-
-	// if not function or member pointer, specify biz type in Parse function
-	//auto&& gram0= expr::TypeHint<biz::UserScore>::MakeGrammar(symbols, fnList0);
 
 	// case 1: member object pointer
 	auto fnList1  = {&biz::UserScore::like,
