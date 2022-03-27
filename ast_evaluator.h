@@ -150,9 +150,6 @@ namespace expr { namespace ast
 			float operator()(element_type const& item) const{
 				return op_ptr->Eval(item);
 			}
-			float operator()(element_type & item) {
-				return op_ptr->Eval(item);
-			}
 
 			~AstEvaluator() { delete op_ptr; }
 
