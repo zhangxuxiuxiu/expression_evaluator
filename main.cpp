@@ -10,6 +10,7 @@
 #include <functional> //mem_fn
 
 #include "grammar.h"
+#include "raw_evaluator.h"
 
 namespace biz{
 	struct UserScore{ float like; float follow; float comment;
@@ -140,7 +141,7 @@ int main()
 		auto user_eval2 = gram2.Parse(str);	
 		auto user_eval3 = gram3.Parse(str);	
 		auto user_eval4 = gram4.Parse(str);	
-		auto user_eval5 = gram5.Parse(str);	
+		auto user_eval5 = gram5.Parse<expr::RawEvaluator>(str);	
 
 		biz::UserScore user1 ={1,2,3}, user2={2,3,4};
 		// NOTE initializer_list<UserScore> won't work for user_eval4 here, b' initializer_list only return const iterator while fnList4 has non-const function

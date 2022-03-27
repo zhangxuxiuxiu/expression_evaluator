@@ -34,7 +34,7 @@ namespace expr { namespace ast
 
 	struct Operation
 	{
-		char operator_;
+		char sign;
 		Operand operand;
 	};
 
@@ -53,7 +53,7 @@ BOOST_FUSION_ADAPT_STRUCT(
 
 BOOST_FUSION_ADAPT_STRUCT(
 		expr::ast::Operation,
-		(char, operator_)
+		(char, sign)
 		(expr::ast::Operand, operand)
 		)
 

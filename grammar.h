@@ -1,6 +1,6 @@
 #pragma once
 
-#include "item_evaluator.h"
+#include "ast_evaluator.h"
 
 #include <boost/spirit/include/qi.hpp> // qi::xxx 
 #include <boost/type_traits.hpp> //  function_traits 
@@ -38,10 +38,11 @@ namespace expr
 	namespace qi = boost::spirit::qi;
 	namespace ascii = boost::spirit::ascii;
 
-	template <typename Iterator, typename FuncType, class ItemType>
+	template <typename Iterator, typename Functor, class Item>
 		struct CalcGrammar : qi::grammar<Iterator, ast::Program(), ascii::space_type>
 	{
-		using func_type = FuncType;
+		using func_type = Functor;
+		using string_type = std::basic_string<typename std::iterator_traits<Iterator>::value_type>;
 
 		template<class Symbols, class FnRange>
 		CalcGrammar(Symbols&& symbols, FnRange&& fns) : CalcGrammar::base_type(expression),
@@ -73,14 +74,17 @@ namespace expr
 				;
 		}
 
-		template<class StrType>
-		ItemEvaluator<FuncType, ItemType> Parse(StrType const& statement) const{
+		AstEvaluator<Functor, Item> Parse(string_type const& statement) const{
+			return doParse(statement);
+		}
+
+		template<template<class, class> class Evaluator>
+		Evaluator<Functor, Item> Parse(string_type const& statement) const{
 			return doParse(statement);
 		}
 
 		private:
-			template<class StrType>
-			expr::ast::Program doParse(StrType const& statement) const{
+			expr::ast::Program doParse(string_type const& statement) const{
 				expr::ast::Program program;
 				auto iter = statement.begin();
 				auto end = statement.end();
@@ -127,18 +131,18 @@ namespace expr
 
 	template<class Keywords, class FnRange, 
 		class KeyIterator=typename IteratorFromKeywords<Keywords>::type, 
-		class FuncType=typename ContainedType<FnRange>::type>
+		class Functor=typename ContainedType<FnRange>::type>
 	auto MakeGrammar(Keywords const& keywords, FnRange const& fnList) 
-	-> typename boost::enable_if<arg1_type<FuncType>,CalcGrammar<KeyIterator, FuncType,typename arg1_type<FuncType>::type >>::type{
+	-> typename boost::enable_if<arg1_type<Functor>,CalcGrammar<KeyIterator, Functor,typename arg1_type<Functor>::type >>::type{
 		return {keywords, fnList};
 	}
 
-	template<class ItemType>
+	template<class Item>
 	struct TypeHint{
 		template<class Keywords, class FnRange, 
 			class KeyIterator=typename IteratorFromKeywords<Keywords>::type, 
-			class FuncType=typename ContainedType<FnRange>::type>
-		static CalcGrammar<KeyIterator, FuncType, ItemType> MakeGrammar(Keywords const& keywords, FnRange const& fnList){
+			class Functor=typename ContainedType<FnRange>::type>
+		static CalcGrammar<KeyIterator, Functor, Item> MakeGrammar(Keywords const& keywords, FnRange const& fnList){
 			return {keywords, fnList};
 		}
 
