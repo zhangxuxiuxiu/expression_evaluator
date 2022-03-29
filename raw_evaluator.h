@@ -20,21 +20,8 @@ namespace expr{
 		result_type operator()(float n) const { return n; }
 
 		template<class F=Functor>
-		auto operator()(ast::ScoreFn const& fn) const
-		->typename std::enable_if<std::is_member_object_pointer<F>::value, result_type>::type { 
-			return item_ptr->*boost::any_cast<Functor>(fn); 
-		}
-
-		template<class F=Functor>
-		auto operator()(ast::ScoreFn const& fn) const
-		->typename std::enable_if<std::is_member_function_pointer<F>::value, result_type>::type  { 
-			return (item_ptr->*boost::any_cast<Functor>(fn))(); 
-		}
-
-		template<class F=Functor>
-		auto operator()(ast::ScoreFn const& fn) const
-		->typename std::enable_if<!std::is_member_pointer<F>::value, result_type>::type  { 
-			return boost::any_cast<Functor>(fn)(*item_ptr); 
+		result_type operator()(ast::ScoreFn const& fn) const{
+			return ast::EvalFn(boost::any_cast<Functor>(fn), item_ptr); 
 		}
 
 		result_type operator()(ast::Operation const& x, float lhs) const

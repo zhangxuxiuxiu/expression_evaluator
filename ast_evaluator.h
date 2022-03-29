@@ -78,29 +78,10 @@ namespace expr { namespace ast
 			FnOp(ScoreFn  f) : fn(boost::any_cast<Functor>(f)) {}
 
 			float Eval(Item const& u) const override{
-				return (*this)(const_cast<Item*>(&u));
+				return EvalFn(fn, const_cast<Item*>(&u));
 			}
 
 			~FnOp() override {}
-
-		private:
-			template<class F=Functor>
-			auto operator()(Item*  u) const 
-			->typename std::enable_if<std::is_member_object_pointer<F>::value, float>::type { 
-				return u->*fn; 
-			}
-	
-			template<class F=Functor>
-			auto operator()(Item*  u) const 
-			->typename std::enable_if<std::is_member_function_pointer<F>::value, float>::type  { 
-				return (u->*fn)(); 
-			}
-	
-			template<class F=Functor>
-			auto operator()(Item*  u) const 
-			->typename std::enable_if<!std::is_member_pointer<F>::value, float>::type  { 
-				return fn(*u); 
-			}
 
 		private:
 			Functor fn;
