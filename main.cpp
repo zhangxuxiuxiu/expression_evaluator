@@ -11,6 +11,7 @@
 
 #include "grammar.h"
 #include "raw_evaluator.h"
+#include "vm_evaluator.h"
 
 namespace biz{
 	struct UserScore{ float like; float follow; float comment;
@@ -45,6 +46,8 @@ struct UserOp2{
 
 	template<class F>
 	UserOp2(F f) : mf(f){}
+
+	UserOp2(UserOp2 const& u) : mf(u.mf){}
 
 	float operator()(biz::UserScore const& user) const{
 		return mf(user);	
@@ -141,7 +144,7 @@ int main()
 		auto user_eval2 = gram2.Parse(str);	
 		auto user_eval3 = gram3.Parse<expr::RawEvaluator>(str);	
 		auto user_eval4 = gram4.Parse<expr::RawEvaluator>(str);	
-		auto user_eval5 = gram5.Parse<expr::RawEvaluator>(str);	
+		auto user_eval5 = gram5.Parse<expr::VMEvaluator>(str);	
 
 		biz::UserScore user1 ={1,2,3}, user2={2,3,4};
 		// NOTE initializer_list<UserScore> won't work for user_eval4 here, b' initializer_list only return const iterator while fnList4 has non-const function

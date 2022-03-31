@@ -12,6 +12,8 @@
 #include <functional> //mem_fn
 
 #include "grammar.h"
+#include "vm_evaluator.h"
+#include "raw_evaluator.h"
 
 namespace biz{
 	struct UserScore{ float like; float follow; float comment;
@@ -49,31 +51,65 @@ int main()
 		&biz::UserScore::cmt
 	};
 	auto&& gram = expr::MakeGrammar(symbols, fnList);
-	auto user_eval1 = gram.Parse(std::string{"like+follow+comment"});	
-	auto user_eval2 = gram.Parse(std::string{"like*follow/(comment-follow)*(like+follow)-0.1"});	
-	auto user_eval3 = gram.Parse(std::string{"(like+follow)*(like+comment)*(follow+comment)/(comment-follow)/(like-follow)/(like-comment)"});	
-
 	std::vector<biz::UserScore> users = {{1,2,3},{3,90,876},{1223343,6787545,3453432}};
-
-	std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
 	auto f = 0.f;
-	for(int i=0; i<100000; ++i){
-		for(auto& u : users){
-			f += biz::score1(u)	+ biz::score2(u) + biz::score3(u);		
-		}
-	}	
-	auto cost = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()-now).count();
-	std::cout << "raw function took " << cost << "ms, result=" <<  f <<'\n';
 
-	f=0.f;
-	now = std::chrono::system_clock::now();
-	for(int i=0; i<100000; ++i){
-		for(auto& u : users){
-			f += user_eval1(u)	+ user_eval2(u) + user_eval3(u);		
-		}
-	}	
-	cost = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()-now).count();
-	std::cout << "parsed function took " << cost << "ms, result=" <<  f <<'\n';
+	{
+		auto user_eval1 = gram.Parse(std::string{"like+follow+comment"});	
+		auto user_eval2 = gram.Parse(std::string{"like*follow/(comment-follow)*(like+follow)-0.1"});	
+		auto user_eval3 = gram.Parse(std::string{"(like+follow)*(like+comment)*(follow+comment)/(comment-follow)/(like-follow)/(like-comment)"});	
+	
+		std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+		for(int i=0; i<100000; ++i){
+			for(auto& u : users){
+				f += biz::score1(u)	+ biz::score2(u) + biz::score3(u);		
+			}
+		}	
+		auto cost = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()-now).count();
+		std::cout << "raw function took " << cost << "ms, result=" <<  f <<'\n';
+	
+		f=0.f;
+		now = std::chrono::system_clock::now();
+		for(int i=0; i<100000; ++i){
+			for(auto& u : users){
+				f += user_eval1(u)	+ user_eval2(u) + user_eval3(u);		
+			}
+		}	
+		cost = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()-now).count();
+		std::cout << "ast parsed function took " << cost << "ms, result=" <<  f <<'\n';
+	}
+
+	{
+		auto user_eval1 = gram.Parse<expr::RawEvaluator>(std::string{"like+follow+comment"});	
+		auto user_eval2 = gram.Parse<expr::RawEvaluator>(std::string{"like*follow/(comment-follow)*(like+follow)-0.1"});	
+		auto user_eval3 = gram.Parse<expr::RawEvaluator>(std::string{"(like+follow)*(like+comment)*(follow+comment)/(comment-follow)/(like-follow)/(like-comment)"});	
+	
+		f=0.f;
+		auto now = std::chrono::system_clock::now();
+		for(int i=0; i<100000; ++i){
+			for(auto& u : users){
+				f += user_eval1(u)	+ user_eval2(u) + user_eval3(u);		
+			}
+		}	
+		auto cost = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()-now).count();
+		std::cout << "raw parsed function took " << cost << "ms, result=" <<  f <<'\n';
+	}
+
+	{
+		auto user_eval1 = gram.Parse<expr::VMEvaluator>(std::string{"like+follow+comment"});	
+		auto user_eval2 = gram.Parse<expr::VMEvaluator>(std::string{"like*follow/(comment-follow)*(like+follow)-0.1"});	
+		auto user_eval3 = gram.Parse<expr::VMEvaluator>(std::string{"(like+follow)*(like+comment)*(follow+comment)/(comment-follow)/(like-follow)/(like-comment)"});	
+	
+		f=0.f;
+		auto now = std::chrono::system_clock::now();
+		for(int i=0; i<100000; ++i){
+			for(auto& u : users){
+				f += user_eval1(u)	+ user_eval2(u) + user_eval3(u);		
+			}
+		}	
+		auto cost = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()-now).count();
+		std::cout << "vm parsed function took " << cost << "ms, result=" <<  f <<'\n';
+	}
 
 	return 0;
 }
