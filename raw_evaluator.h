@@ -7,11 +7,11 @@ namespace expr{
 	///////////////////////////////////////////////////////////////////////////
 	//  The AST evaluator
 	///////////////////////////////////////////////////////////////////////////
-	template<class Functor, class Item>
+	template<class Functor, class Evalee>
 	struct RawTransformer
 	{
-		// Item can't be qualified with const here in case non-const object or function
-		mutable  Item * item_ptr=nullptr;
+		// Evalee can't be qualified with const here in case non-const object or function
+		mutable  Evalee * eval_ptr=nullptr;
 
 		typedef float result_type;
 
@@ -21,7 +21,7 @@ namespace expr{
 
 		template<class F=Functor>
 		result_type operator()(ast::ScoreFn const& fn) const{
-			return ast::EvalFn(boost::any_cast<Functor>(fn), item_ptr); 
+			return ast::EvalFn(boost::any_cast<Functor>(fn), eval_ptr); 
 		}
 
 		result_type operator()(ast::Operation const& x, float lhs) const
@@ -61,14 +61,14 @@ namespace expr{
 		}
 	};
 
-	template<class Functor, class Item>
+	template<class Functor, class Evalee>
 	class RawEvaluator{
 		public:
-			using element_type = Item; 
+			using element_type = Evalee; 
 			RawEvaluator(ast::Program const& prog) : program(prog){}
 
-			float operator()(element_type const& item) const{
-				eval.item_ptr = const_cast<Item*>(&item);
+			float operator()(element_type const& e) const{
+				eval.eval_ptr = const_cast<Evalee*>(&e);
 				return eval(program);
 			}
 

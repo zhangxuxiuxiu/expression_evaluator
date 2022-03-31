@@ -8,19 +8,19 @@
 namespace expr { namespace ast
 {
 	// non-variant version	
-	template<class Item>
+	template<class Evalee>
 	class Op{
 		public:		
-			virtual float Eval(Item const&) const = 0;
+			virtual float Eval(Evalee const&) const = 0;
 			virtual ~Op() {}
 	};
 	
-	template<class Item>
-	class Value : public Op<Item>{
+	template<class Evalee>
+	class Value : public Op<Evalee>{
 		public:			
 			Value(float v) : val(v) {}
 
-			float Eval(Item const&) const override{
+			float Eval(Evalee const&) const override{
 				return val;
 			} 
 
@@ -30,12 +30,12 @@ namespace expr { namespace ast
 			float val;
 	};
 
-	template<class Item>
-	class SignedOp: public Op<Item>{
+	template<class Evalee>
+	class SignedOp: public Op<Evalee>{
 		public:			
-			SignedOp(bool s, Op<Item>* p) : sign(s), op_ptr(p) {}
+			SignedOp(bool s, Op<Evalee>* p) : sign(s), op_ptr(p) {}
 
-			float Eval(Item const& u) const override{
+			float Eval(Evalee const& u) const override{
 				return (sign?1:-1)*(op_ptr->Eval(u)); 
 			} 
 
@@ -43,15 +43,15 @@ namespace expr { namespace ast
 
 		private:
 			bool sign;
-			Op<Item>* op_ptr;
+			Op<Evalee>* op_ptr;
 	};
 
-	template<class Item>
-	class BinaryOp: public Op<Item>{
+	template<class Evalee>
+	class BinaryOp: public Op<Evalee>{
 		public:			
-			BinaryOp(char s, Op<Item>* l, Op<Item>* r) : sign(s), lop_ptr(l), rop_ptr(r) {}
+			BinaryOp(char s, Op<Evalee>* l, Op<Evalee>* r) : sign(s), lop_ptr(l), rop_ptr(r) {}
 
-			float Eval(Item const& u) const override{
+			float Eval(Evalee const& u) const override{
 				float lhs = lop_ptr->Eval(u); 
 				float rhs = rop_ptr->Eval(u); 
 				switch (sign)
@@ -68,17 +68,17 @@ namespace expr { namespace ast
 
 		private:
 			char sign;
-			Op<Item>* lop_ptr;
-			Op<Item>* rop_ptr;
+			Op<Evalee>* lop_ptr;
+			Op<Evalee>* rop_ptr;
 	};
 	
-	template<class Functor, class Item>
-	class FnOp : public Op<Item>{
+	template<class Functor, class Evalee>
+	class FnOp : public Op<Evalee>{
 		public:
 			FnOp(ScoreFn  f) : fn(boost::any_cast<Functor>(f)) {}
 
-			float Eval(Item const& u) const override{
-				return EvalFn(fn, const_cast<Item*>(&u));
+			float Eval(Evalee const& u) const override{
+				return EvalFn(fn, const_cast<Evalee*>(&u));
 			}
 
 			~FnOp() override {}
@@ -92,17 +92,17 @@ namespace expr { namespace ast
 	///////////////////////////////////////////////////////////////////////////
 	//  The AST evaluator
 	///////////////////////////////////////////////////////////////////////////
-	template<class Functor, class Item>
+	template<class Functor, class Evalee>
 	struct AstTransformer 
 	{
-		typedef ast::Op<Item>* result_type;
+		typedef ast::Op<Evalee>* result_type;
 
 		result_type operator()(ast::Nil) const { BOOST_ASSERT(0); return nullptr; }
 
-		result_type operator()(float n) const { return new ast::Value<Item>(n); }
+		result_type operator()(float n) const { return new ast::Value<Evalee>(n); }
 
 		result_type operator()(ast::ScoreFn const& fn) const{
-			return new ast::FnOp<Functor,Item>(fn); 
+			return new ast::FnOp<Functor,Evalee>(fn); 
 		}
 
 		result_type operator()(ast::Operand const& op) const{
@@ -110,32 +110,32 @@ namespace expr { namespace ast
 		}
 
 		result_type operator()(ast::Signed const& x) const{
-			return new ast::SignedOp<Item>(x.sign=='+', (*this)(x.operand));
+			return new ast::SignedOp<Evalee>(x.sign=='+', (*this)(x.operand));
 		}
 
 		result_type operator()(ast::Program const& x) const{
 			auto lop_ptr = (*this)(x.first);				
 			for(ast::Operation const& oper : x.rest){
-				lop_ptr = new ast::BinaryOp<Item>(oper.sign, lop_ptr, (*this)(oper.operand)); 
+				lop_ptr = new ast::BinaryOp<Evalee>(oper.sign, lop_ptr, (*this)(oper.operand)); 
 			}
 			return lop_ptr;
 		}
 	};
 
-	template<class Functor, class Item>
+	template<class Functor, class Evalee>
 	class AstEvaluator{
 		public:
-			using element_type = Item; 
-			AstEvaluator(ast::Program const& prog) : op_ptr(AstTransformer<Functor, Item>()(prog)){}
+			using element_type = Evalee; 
+			AstEvaluator(ast::Program const& prog) : op_ptr(AstTransformer<Functor, Evalee>()(prog)){}
 
-			float operator()(element_type const& item) const{
-				return op_ptr->Eval(item);
+			float operator()(element_type const& e) const{
+				return op_ptr->Eval(e);
 			}
 
 			~AstEvaluator() { delete op_ptr; }
 
 		private:
-			typename AstTransformer<Functor, Item>::result_type op_ptr;
+			typename AstTransformer<Functor, Evalee>::result_type op_ptr;
 			
 	};
 

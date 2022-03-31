@@ -97,13 +97,13 @@ namespace expr{
 			op_fn	    //  call fn on user data
 		};
 
-		template<class Functor, class Item>
+		template<class Functor, class Evalee>
 		class VirtualMachine{
 			public:	
 				VirtualMachine(uint32_t* code, uint32_t csize, uint32_t vsize): code_stack(code), 
 					code_size(csize), var_stack(new float[vsize]), end_var(var_stack+vsize){}
 
-				float Eval(Item const& item) const{
+				float Eval(Evalee const& item) const{
 					uint32_t* pc = code_stack;
 					float* stack_ptr = var_stack;
 					const uint32_t * end_pc = code_stack + code_size;
@@ -141,7 +141,7 @@ namespace expr{
 								break;
 
 							case op_fn:
-								*stack_ptr++ = expr::ast::EvalFn(*(Functor*)(pc), const_cast<Item *>(&item));
+								*stack_ptr++ = expr::ast::EvalFn(*(Functor*)(pc), const_cast<Evalee *>(&item));
 								pc += sizeof(Functor)/sizeof(uint32_t);
 								break;
 							default:
@@ -198,17 +198,18 @@ namespace expr{
 				float*    end_var;
 		};
 
-		template<class Functor, class Item>
+		template<class Functor, class Evalee>
 		struct Compiler 
 		{
-			typedef void result_type;
+			typedef VirtualMachine<Functor, Evalee>* result_type;
 
-			result_type operator()(ast::Nil) { BOOST_ASSERT(0);  }
+			result_type operator()(ast::Nil) { BOOST_ASSERT(0); return nullptr; }
 
 			result_type operator()(float n) { 
 				code_stack[pc++] = ByteCode::op_int;
 				*(float*)(code_stack+pc) = n ;
 				pc += sizeof(float)/sizeof(uint32_t);
+				return nullptr;
 			}
 
 			template<class T>
@@ -227,10 +228,12 @@ namespace expr{
 				code_stack[pc++] = ByteCode::op_fn;
 				assign((Functor*)(code_stack+pc), f);
 				pc += sizeof(Functor)/sizeof(uint32_t);
+				return nullptr;
 			}
 
 			result_type operator()(ast::Operand const& op) {
 				return boost::apply_visitor(*this,op);
+				return nullptr;
 			}
 
 			result_type operator()(ast::Signed const& x) {
@@ -238,13 +241,16 @@ namespace expr{
 				if(x.sign=='-'){
 					code_stack[pc++] = ByteCode::op_neg;
 				}
+				return nullptr;
 			}
 
 			result_type operator()(ast::Program const& x) {
+				bool outer_prog = false;
 				if(code_stack == nullptr){
 					code_capacity = CodeSize<Functor>()(x);
 					code_stack = new uint32_t[code_capacity];
 					stack_size = StackSize<Functor>()(x);
+					outer_prog = true;
 				}
 
 				(*this)(x.first);				
@@ -258,19 +264,21 @@ namespace expr{
 						case '/': code_stack[pc++] = ByteCode::op_div; break;
 					}
 				}
+				return outer_prog ? vm() : nullptr;
 			}
 
-			VirtualMachine<Functor, Item>* operator()() {
-				if(pc != code_capacity){
-					throw std::invalid_argument("wrong stack size calculation");
+			private:
+				result_type  vm() {
+					if(pc != code_capacity){
+						throw std::invalid_argument("wrong stack size calculation");
+					}
+					auto vm = new VirtualMachine<Functor, Evalee>{code_stack, code_capacity, stack_size};
+					code_stack = nullptr;
+					code_capacity = 0;
+					stack_size = 0;
+					pc = 0;
+					return vm;
 				}
-				auto vm = new VirtualMachine<Functor, Item>{code_stack, code_capacity, stack_size};
-				code_stack = nullptr;
-				code_capacity = 0;
-				stack_size = 0;
-				pc = 0;
-				return vm;
-			}
 
 			private:
 				uint32_t* code_stack = nullptr;
@@ -280,23 +288,19 @@ namespace expr{
 		};
 	}
 
-	template<class Functor, class Item>
+	template<class Functor, class Evalee>
 	class VMEvaluator{
 		public:
-			using element_type = Item; 
-			VMEvaluator(expr::ast::Program const& prog){
-				vm::Compiler<Functor, Item> compiler;
-				compiler(prog);
-				vm_ptr = compiler();
-			} 
+			using element_type = Evalee; 
+			VMEvaluator(expr::ast::Program const& prog) : vm_ptr(vm::Compiler<Functor, Evalee>()(prog)){}
 
-			float operator()(element_type const& item) const{
-				return vm_ptr->Eval(item);
+			float operator()(element_type const& e) const{
+				return vm_ptr->Eval(e);
 			}
 
 			~VMEvaluator() { delete vm_ptr; }
 
 		private:
-			vm::VirtualMachine<Functor, Item> * vm_ptr; 
+			vm::VirtualMachine<Functor, Evalee> * vm_ptr; 
 	};
 }

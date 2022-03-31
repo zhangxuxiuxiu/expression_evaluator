@@ -44,8 +44,8 @@ namespace expr
 		using func_type = Functor;
 		using string_type = std::basic_string<typename std::iterator_traits<Iterator>::value_type>;
 
-		template<class Symbols, class FnRange>
-		CalcGrammar(Symbols&& symbols, FnRange&& fns) : CalcGrammar::base_type(expression),
+		template<class Symbols, class Functors>
+		CalcGrammar(Symbols&& symbols, Functors&& fns) : CalcGrammar::base_type(expression),
 			symbol2fn(symbols, fns)
 		{
 			qi::float_type float_;
@@ -129,20 +129,20 @@ namespace expr
 			>::type;
 	};
 
-	template<class Keywords, class FnRange, 
+	template<class Keywords, class Functors, 
 		class KeyIterator=typename IteratorFromKeywords<Keywords>::type, 
-		class Functor=typename ContainedType<FnRange>::type>
-	auto MakeGrammar(Keywords const& keywords, FnRange const& fnList) 
+		class Functor=typename ContainedType<Functors>::type>
+	auto MakeGrammar(Keywords const& keywords, Functors const& fnList) 
 	-> typename boost::enable_if<arg1_type<Functor>,CalcGrammar<KeyIterator, Functor,typename arg1_type<Functor>::type >>::type{
 		return {keywords, fnList};
 	}
 
 	template<class Item>
 	struct TypeHint{
-		template<class Keywords, class FnRange, 
+		template<class Keywords, class Functors, 
 			class KeyIterator=typename IteratorFromKeywords<Keywords>::type, 
-			class Functor=typename ContainedType<FnRange>::type>
-		static CalcGrammar<KeyIterator, Functor, Item> MakeGrammar(Keywords const& keywords, FnRange const& fnList){
+			class Functor=typename ContainedType<Functors>::type>
+		static CalcGrammar<KeyIterator, Functor, Item> MakeGrammar(Keywords const& keywords, Functors const& fnList){
 			return {keywords, fnList};
 		}
 

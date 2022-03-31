@@ -60,17 +60,17 @@ int main()
 		auto user_eval3 = gram.Parse(std::string{"(like+follow)*(like+comment)*(follow+comment)/(comment-follow)/(like-follow)/(like-comment)"});	
 	
 		std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
-		for(int i=0; i<100000; ++i){
+		for(int i=0; i<1000000; ++i){
 			for(auto& u : users){
 				f += biz::score1(u)	+ biz::score2(u) + biz::score3(u);		
 			}
 		}	
 		auto cost = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()-now).count();
-		std::cout << "raw function took " << cost << "ms, result=" <<  f <<'\n';
+		std::cout << "raw cpp function took " << cost << "ms, result=" <<  f <<'\n';
 	
 		f=0.f;
 		now = std::chrono::system_clock::now();
-		for(int i=0; i<100000; ++i){
+		for(int i=0; i<1000000; ++i){
 			for(auto& u : users){
 				f += user_eval1(u)	+ user_eval2(u) + user_eval3(u);		
 			}
@@ -86,7 +86,7 @@ int main()
 	
 		f=0.f;
 		auto now = std::chrono::system_clock::now();
-		for(int i=0; i<100000; ++i){
+		for(int i=0; i<1000000; ++i){
 			for(auto& u : users){
 				f += user_eval1(u)	+ user_eval2(u) + user_eval3(u);		
 			}
@@ -102,7 +102,7 @@ int main()
 	
 		f=0.f;
 		auto now = std::chrono::system_clock::now();
-		for(int i=0; i<100000; ++i){
+		for(int i=0; i<1000000; ++i){
 			for(auto& u : users){
 				f += user_eval1(u)	+ user_eval2(u) + user_eval3(u);		
 			}
