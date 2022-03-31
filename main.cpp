@@ -139,11 +139,11 @@ int main()
 			break;
 
 		//auto user_eval0 = gram0.Parse<biz::UserScore>(str); 
-		auto user_eval0 = gram0.Parse(str); 
-		auto user_eval1 = gram1.Parse(str);	
-		auto user_eval2 = gram2.Parse(str);	
-		auto user_eval3 = gram3.Parse<expr::RawEvaluator>(str);	
-		auto user_eval4 = gram4.Parse<expr::RawEvaluator>(str);	
+		auto user_eval0 = gram0.Parse<expr::VMEvaluator>(str); 
+		auto user_eval1 = gram1.Parse<expr::VMEvaluator>(str);	
+		auto user_eval2 = gram2.Parse<expr::VMEvaluator>(str);	
+		auto user_eval3 = gram3.Parse<expr::VMEvaluator>(str);	
+		auto user_eval4 = gram4.Parse<expr::VMEvaluator>(str);	
 		auto user_eval5 = gram5.Parse<expr::VMEvaluator>(str);	
 
 		biz::UserScore user1 ={1,2,3}, user2={2,3,4};

@@ -11,7 +11,7 @@ namespace expr{
 	namespace vm{
 
 		template<class Functor>
-		struct StackSize
+		struct CodeSize
 		{
 			typedef uint32_t result_type;
 
@@ -46,6 +46,42 @@ namespace expr{
 			}
 		};
 
+		template<class Functor>
+		struct StackSize
+		{
+			typedef uint32_t result_type;
+
+			result_type operator()(ast::Nil) const { BOOST_ASSERT(0); return 0; }
+
+			result_type operator()(float n) const { 
+				static_assert(sizeof(float)%sizeof(uint32_t)==0, "sizeof(float)%sizeof(uint32_t)==0");
+				// op_int + float
+				return sizeof(float)/sizeof(uint32_t); 
+			}
+
+			result_type operator()(ast::ScoreFn const& fn) const{
+				static_assert(sizeof(Functor)%sizeof(uint32_t)==0, "sizeof(Functor)%sizeof(uint32_t)==0");
+				// op_fn + fn -> float(fn)(user)
+				return sizeof(float)/sizeof(uint32_t); 
+			}
+
+			result_type operator()(ast::Operand const& op) const{
+				return boost::apply_visitor(*this,op);
+			}
+
+			result_type operator()(ast::Signed const& x) const{
+				return (*this)(x.operand);
+			}
+
+			result_type operator()(ast::Program const& x) const{
+				result_type left_max = (*this)(x.first);				
+				for(ast::Operation const& oper : x.rest){
+					left_max = std::max(left_max, 1 + (*this)(oper.operand) );
+				}
+				return left_max;
+			}
+		};
+
 		enum ByteCode
 		{
 			op_neg,     //  negate the top stack entry
@@ -65,7 +101,7 @@ namespace expr{
 		class VirtualMachine{
 			public:	
 				VirtualMachine(uint32_t* code, uint32_t csize, uint32_t vsize): code_stack(code), 
-				code_size(csize), var_stack(new float[vsize]), end_var(var_stack+vsize){}
+					code_size(csize), var_stack(new float[vsize]), end_var(var_stack+vsize){}
 
 				float Eval(Item const& item) const{
 					uint32_t* pc = code_stack;
@@ -206,8 +242,9 @@ namespace expr{
 
 			result_type operator()(ast::Program const& x) {
 				if(code_stack == nullptr){
-					stack_capacity = StackSize<Functor>()(x);
-					code_stack = new uint32_t[stack_capacity];
+					code_capacity = CodeSize<Functor>()(x);
+					code_stack = new uint32_t[code_capacity];
+					stack_size = StackSize<Functor>()(x);
 				}
 
 				(*this)(x.first);				
@@ -224,20 +261,22 @@ namespace expr{
 			}
 
 			VirtualMachine<Functor, Item>* operator()() {
-				if(pc != stack_capacity){
+				if(pc != code_capacity){
 					throw std::invalid_argument("wrong stack size calculation");
 				}
-				auto vm = new VirtualMachine<Functor, Item>{code_stack, stack_capacity, 32};
+				auto vm = new VirtualMachine<Functor, Item>{code_stack, code_capacity, stack_size};
 				code_stack = nullptr;
-				stack_capacity = 0;
+				code_capacity = 0;
+				stack_size = 0;
 				pc = 0;
 				return vm;
 			}
 
 			private:
 				uint32_t* code_stack = nullptr;
-				uint32_t  stack_capacity = 0;
+				uint32_t  code_capacity = 0;
 				uint32_t  pc = 0;
+				uint32_t  stack_size = 0;
 		};
 	}
 
