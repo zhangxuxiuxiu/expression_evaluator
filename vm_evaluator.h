@@ -101,7 +101,7 @@ namespace expr{
 		class VirtualMachine{
 			public:	
 				VirtualMachine(uint32_t* code, uint32_t csize, uint32_t vsize): code_stack(code), 
-					code_size(csize), var_stack(new float[vsize]), end_var(var_stack+vsize){}
+					code_size(csize), var_stack(new float[vsize]){}
 
 				float Eval(Evalee const& item) const{
 					uint32_t* pc = code_stack;
@@ -155,15 +155,6 @@ namespace expr{
 					return *var_stack; 
 				}
 	
-				template<class T>
-				auto destruct(T* p)
-				-> typename std::enable_if<std::is_trivial<T>::value>::type{
-				}
-				template<class T>
-				auto destruct(T* p)
-				-> typename std::enable_if<!std::is_trivial<T>::value && std::is_copy_constructible<T>::value>::type{
-					p -> ~T();	
-				}
 
 				~VirtualMachine() {
 					uint32_t* pc = code_stack;
@@ -192,10 +183,21 @@ namespace expr{
 				}
 
 			private:
+				template<class T>
+				auto destruct(T* p)
+				-> typename std::enable_if<std::is_trivial<T>::value>::type{
+				}
+
+				template<class T>
+				auto destruct(T* p)
+				-> typename std::enable_if<!std::is_trivial<T>::value && std::is_copy_constructible<T>::value>::type{
+					p -> ~T();	
+				}
+
+			private:
 				uint32_t* code_stack;
 				uint32_t  code_size;
 				float* 	  var_stack;
-				float*    end_var;
 		};
 
 		template<class Functor, class Evalee>
@@ -210,17 +212,6 @@ namespace expr{
 				*(float*)(code_stack+pc) = n ;
 				pc += sizeof(float)/sizeof(uint32_t);
 				return nullptr;
-			}
-
-			template<class T>
-			auto assign(T* dest, T const& v)
-			-> typename std::enable_if<std::is_trivial<T>::value>::type{
-				*dest = v;	
-			}
-			template<class T>
-			auto assign(T* dest, T const& v)
-			-> typename std::enable_if<!std::is_trivial<T>::value && std::is_copy_constructible<T>::value>::type{
-				new (dest) T(v);	
 			}
 
 			result_type operator()(ast::ScoreFn const& fn) {
@@ -268,6 +259,18 @@ namespace expr{
 			}
 
 			private:
+				template<class T>
+				auto assign(T* dest, T const& v)
+				-> typename std::enable_if<std::is_trivial<T>::value>::type{
+					*dest = v;	
+				}
+
+				template<class T>
+				auto assign(T* dest, T const& v)
+				-> typename std::enable_if<!std::is_trivial<T>::value && std::is_copy_constructible<T>::value>::type{
+					new (dest) T(v);	
+				}
+
 				result_type  vm() {
 					if(pc != code_capacity){
 						throw std::invalid_argument("wrong stack size calculation");
