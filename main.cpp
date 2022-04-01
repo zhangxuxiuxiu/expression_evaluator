@@ -41,16 +41,22 @@ struct UserOp{
 struct UserOp2{
 	std::function<float(biz::UserScore const&)> mf;
 
-	// default constructible required
-	UserOp2(){}
-
 	template<class F>
 	UserOp2(F f) : mf(f){}
 
+	// VMEvaluator required this to be copy constructible
 	UserOp2(UserOp2 const& u) : mf(u.mf){}
 
 	float operator()(biz::UserScore const& user) const{
 		return mf(user);	
+	}
+};
+
+struct UserOp3{
+	uint32_t index;
+
+	float operator()(std::vector<float> const& user) const{
+		return user[index];;	
 	}
 };
 
@@ -132,19 +138,25 @@ int main()
 	auto&& gram5 = expr::TypeHint<biz::UserScore>::MakeGrammar(symbols, fnList5);
 	//auto&& gram5 = expr::MakeGrammar(symbols, fnList5); // disable by enable_if<arg1_type<F>>
 
+	// case 6: configurable symbols definition in which fn list is not bound to static function,
+	//		then symbol list may change and evalee can bring more information as biz changes 
+	//		on runtime rather on compilation time
+	std::vector<UserOp3> fnList6  = { {0}, {1}, {2} };
+	auto&& gram6 = expr::TypeHint<std::vector<float>>::MakeGrammar(symbols, fnList6);
+
 	std::string str;
 	while (std::getline(std::cin, str)) 
 	{
 		if (str.empty() || str[0] == 'q' || str[0] == 'Q')
 			break;
 
-		//auto user_eval0 = gram0.Parse<biz::UserScore>(str); 
 		auto user_eval0 = gram0.Parse<expr::VMEvaluator>(str); 
 		auto user_eval1 = gram1.Parse<expr::VMEvaluator>(str);	
 		auto user_eval2 = gram2.Parse<expr::VMEvaluator>(str);	
 		auto user_eval3 = gram3.Parse<expr::VMEvaluator>(str);	
 		auto user_eval4 = gram4.Parse<expr::VMEvaluator>(str);	
 		auto user_eval5 = gram5.Parse<expr::VMEvaluator>(str);	
+		auto user_eval6 = gram6.Parse<expr::VMEvaluator>(str);	
 
 		biz::UserScore user1 ={1,2,3}, user2={2,3,4};
 		// NOTE initializer_list<UserScore> won't work for user_eval4 here, b' initializer_list only return const iterator while fnList4 has non-const function
@@ -156,6 +168,7 @@ int main()
 			std::cout << "weighted score is : " << user_eval3(user) << '\n' << std::endl;
 			std::cout << "weighted score is : " << user_eval4(user) << '\n' << std::endl;
 			std::cout << "weighted score is : " << user_eval5(user) << '\n' << std::endl;
+			std::cout << "weighted score is : " << user_eval6(std::vector<float>({user.like, user.follow, user.comment})) << '\n' << std::endl;
 		}
 		std::cout << "-------------------------\n";
 	}

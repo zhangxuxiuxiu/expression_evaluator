@@ -294,7 +294,11 @@ namespace expr{
 	template<class Functor, class Evalee>
 	class VMEvaluator{
 		public:
+			static_assert(std::is_trivial<Functor>::value || std::is_copy_constructible<Functor>::value, 
+				"Functor required to be trival or copy constructible");
+
 			using element_type = Evalee; 
+
 			VMEvaluator(expr::ast::Program const& prog) : vm_ptr(vm::Compiler<Functor, Evalee>()(prog)){}
 
 			float operator()(element_type const& e) const{
