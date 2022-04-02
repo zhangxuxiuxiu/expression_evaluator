@@ -1,3 +1,5 @@
+read main.cpp for usages, read benckmark.cpp for script expression examples.
+
 benchmark:
 	environment:  macos catalina 10.15.7,  2.5GHZ, 8 core i9, 1M ops
 		raw parsed function took 12780ms
