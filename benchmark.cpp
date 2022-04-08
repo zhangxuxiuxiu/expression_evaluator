@@ -14,12 +14,32 @@
 #include "grammar.h"
 #include "vm_evaluator.h"
 #include "raw_evaluator.h"
+#include "lua_evaluator.h"
+
+const char* stmt1 = "like+follow+comment";
+const char* stmt2 = "like*follow/(comment-follow)*(like+follow)-0.1";
+const char* stmt3 = "(like+follow)*(like+comment)*(follow+comment)/(comment-follow)/(like-follow)/(like-comment)";
 
 namespace biz{
 	struct UserScore{ float like; float follow; float comment;
 		float lk() const{ return like;}
 		float fw() const{ return follow;}
 		float cmt() const{ return comment;}
+		
+		// required by lua eval 
+		static constexpr const char* attr_list ="like,follow,comment";
+		static float Eval(lua_State* state, const char* fn_name, UserScore const& score){
+			lua_getglobal(state, fn_name);
+			lua_pushnumber(state, score.like);
+			lua_pushnumber(state, score.follow);
+			lua_pushnumber(state, score.comment);
+			int err = lua_pcall(state, 3, 1, 0);
+
+			expr::OnError(state, err);
+			float result = lua_tonumber(state, -1);
+			lua_pop(state, 1);	
+			return result;
+		}
 	};
 
 	float score1(UserScore const& u){
@@ -36,11 +56,6 @@ namespace biz{
 
 int main()
 {
-	std::cout << "/////////////////////////////////////////////////////////\n\n";
-	std::cout << "Expression parser...\n\n";
-	std::cout << "/////////////////////////////////////////////////////////\n\n";
-	std::cout << "Type an expression...or [q or Q] to quit\n\n";
-
 	auto symbols = {"like","follow", "comment"};
 	//auto fnList  = {&biz::UserScore::like,
 	//	&biz::UserScore::follow,
@@ -55,9 +70,9 @@ int main()
 	auto f = 0.f;
 
 	{
-		auto user_eval1 = gram.Parse(std::string{"like+follow+comment"});	
-		auto user_eval2 = gram.Parse(std::string{"like*follow/(comment-follow)*(like+follow)-0.1"});	
-		auto user_eval3 = gram.Parse(std::string{"(like+follow)*(like+comment)*(follow+comment)/(comment-follow)/(like-follow)/(like-comment)"});	
+		auto user_eval1 = gram.Parse(stmt1);	
+		auto user_eval2 = gram.Parse(stmt2);	
+		auto user_eval3 = gram.Parse(stmt3);	
 	
 		std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
 		for(int i=0; i<1000000; ++i){
@@ -80,9 +95,9 @@ int main()
 	}
 
 	{
-		auto user_eval1 = gram.Parse<expr::RawEvaluator>(std::string{"like+follow+comment"});	
-		auto user_eval2 = gram.Parse<expr::RawEvaluator>(std::string{"like*follow/(comment-follow)*(like+follow)-0.1"});	
-		auto user_eval3 = gram.Parse<expr::RawEvaluator>(std::string{"(like+follow)*(like+comment)*(follow+comment)/(comment-follow)/(like-follow)/(like-comment)"});	
+		auto user_eval1 = gram.Parse<expr::RawEvaluator>(stmt1);	
+		auto user_eval2 = gram.Parse<expr::RawEvaluator>(stmt2);	
+		auto user_eval3 = gram.Parse<expr::RawEvaluator>(stmt3);	
 	
 		f=0.f;
 		auto now = std::chrono::system_clock::now();
@@ -96,9 +111,9 @@ int main()
 	}
 
 	{
-		auto user_eval1 = gram.Parse<expr::VMEvaluator>(std::string{"like+follow+comment"});	
-		auto user_eval2 = gram.Parse<expr::VMEvaluator>(std::string{"like*follow/(comment-follow)*(like+follow)-0.1"});	
-		auto user_eval3 = gram.Parse<expr::VMEvaluator>(std::string{"(like+follow)*(like+comment)*(follow+comment)/(comment-follow)/(like-follow)/(like-comment)"});	
+		auto user_eval1 = gram.Parse<expr::VMEvaluator>(stmt1);	
+		auto user_eval2 = gram.Parse<expr::VMEvaluator>(stmt2);	
+		auto user_eval3 = gram.Parse<expr::VMEvaluator>(stmt3);	
 	
 		f=0.f;
 		auto now = std::chrono::system_clock::now();
@@ -111,6 +126,22 @@ int main()
 		std::cout << "vm parsed function took " << cost << "ms, result=" <<  f <<'\n';
 	}
 
+	{
+		expr::LuaGrammar<biz::UserScore> grammar;
+		auto user_eval1 = grammar.Eval("s1", stmt1); 
+		auto user_eval2 = grammar.Eval("s2", stmt2); 
+		auto user_eval3 = grammar.Eval("s3", stmt3); 
+
+		f=0.f;
+		auto now = std::chrono::system_clock::now();
+		for(int i=0; i<1000000; ++i){
+			for(auto& u : users){
+				f += user_eval1(u)	+ user_eval2(u) + user_eval3(u);		
+			}
+		}	
+		auto cost = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()-now).count();
+		std::cout << "lua parsed function took " << cost << "ms, result=" <<  f <<'\n';
+	}
 	return 0;
 }
 
