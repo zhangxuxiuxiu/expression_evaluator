@@ -1,6 +1,7 @@
 #pragma once
 
 #include "raw_ast.h"
+#include "eval_fn.h"
 
 namespace expr{
 

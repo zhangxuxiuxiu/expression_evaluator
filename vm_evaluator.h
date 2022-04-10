@@ -6,6 +6,7 @@
 #include <exception>
 #include <iostream>
 #include "raw_ast.h"
+#include "eval_fn.h"
 
 namespace expr{
 	namespace vm{
